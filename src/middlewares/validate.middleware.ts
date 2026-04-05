@@ -1,0 +1,13 @@
+import { NextFunction, Request, Response } from 'express';
+import { ZodTypeAny } from 'zod';
+
+export function validate(schema: ZodTypeAny) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    schema.parse({
+      body: req.body,
+      query: req.query,
+      params: req.params
+    });
+    next();
+  };
+}

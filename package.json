@@ -1,0 +1,60 @@
+{
+  "name": "finance-dashboard-backend",
+  "version": "1.0.0",
+  "description": "Finance data processing and access control backend",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "express",
+    "prisma",
+    "postgresql",
+    "jwt",
+    "zod",
+    "swagger"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^6.9.0",
+    "bcryptjs": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "helmet": "latest",
+    "http-status-codes": "latest",
+    "jsonwebtoken": "latest",
+    "morgan": "latest",
+    "swagger-jsdoc": "latest",
+    "swagger-ui-express": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@types/cors": "latest",
+    "@types/express": "latest",
+    "@types/jest": "latest",
+    "@types/jsonwebtoken": "latest",
+    "@types/morgan": "latest",
+    "@types/node": "latest",
+    "@types/supertest": "latest",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
+    "jest": "latest",
+    "prisma": "^6.9.0",
+    "supertest": "latest",
+    "ts-jest": "latest",
+    "ts-node": "latest",
+    "ts-node-dev": "latest",
+    "typescript": "latest"
+  }
+}
