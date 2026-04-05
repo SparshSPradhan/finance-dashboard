@@ -5,7 +5,10 @@ const config: Config = {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   clearMocks: true,
-  setupFiles: ['<rootDir>/tests/setupEnv.ts']
+  setupFiles: ['<rootDir>/tests/setupEnv.ts'],
+  globalSetup: '<rootDir>/tests/globalSetup.cjs',
+  testPathIgnorePatterns: ['/node_modules/'],
+  modulePathIgnorePatterns: ['<rootDir>/dist/']
 };
 
 export default config;

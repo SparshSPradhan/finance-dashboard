@@ -113,8 +113,13 @@ finance-dashboard/
     app.ts
     server.ts
   tests/
+    globalSetup.cjs
     setupEnv.ts
     health.test.ts
+    helpers/
+      resetTestData.ts
+    integration/
+      app.integration.test.ts
   .env.example
   .gitignore
   Dockerfile
@@ -283,9 +288,32 @@ curl http://localhost:4000/dashboard/summary \
 
 ## Run Tests
 
-```bash
-npm test
-```
+Integration tests use PostgreSQL database **`finance_dashboard_test`** (create it once if it does not exist). They run **`prisma migrate deploy`** automatically via Jest `globalSetup` before any tests.
+
+1. Optional: copy `.env.test.example` → `.env.test` and set `TEST_DATABASE_URL` if your Postgres user/password/host differs from the default.
+
+   ```bash
+   cp .env.test.example .env.test
+   ```
+
+   Example:
+
+   ```text
+   TEST_DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/finance_dashboard_test?schema=public
+   ```
+
+2. Run tests (uses `TEST_DATABASE_URL` from `.env.test` when present; otherwise the same default URL as in `tests/setupEnv.ts`):
+
+   ```bash
+   npm test
+   ```
+
+What is covered:
+
+- `tests/health.test.ts` — smoke test for `GET /health` (no DB writes).
+- `tests/integration/app.integration.test.ts` — auth, users (admin), records CRUD + filters, dashboard summary/trend, RBAC (403/401), validation (400).
+
+Each integration test resets data with `deleteMany` and re-seeds isolated users (emails under `@test.local`).
 
 ---
 
