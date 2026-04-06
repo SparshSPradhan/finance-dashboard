@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.middleware';
+import { authRouteLimiter } from '../middlewares/rateLimit.middleware';
 import { authRouter } from '../modules/auth/auth.route';
 import { dashboardRouter } from '../modules/dashboard/dashboard.route';
 import { recordRouter } from '../modules/records/record.route';
@@ -30,7 +31,7 @@ router.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-router.use('/auth', authRouter);
+router.use('/auth', authRouteLimiter, authRouter);
 router.use('/users', authenticate, userRouter);
 router.use('/records', authenticate, recordRouter);
 router.use('/dashboard', authenticate, dashboardRouter);

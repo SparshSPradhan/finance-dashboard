@@ -1,4 +1,4 @@
-import { Prisma, RecordType } from '@prisma/client';
+import { Prisma, RecordType, Role } from '@prisma/client';
 import { StatusCodes } from 'http-status-codes';
 import { prisma } from '../../lib/prisma';
 import { AppError } from '../common/errors';
@@ -32,8 +32,15 @@ export async function listRecords(query: {
   endDate?: string;
   page: number;
   limit: number;
+  includeDeleted?: boolean;
+  requesterRole: Role;
 }) {
+  if (query.includeDeleted && query.requesterRole !== Role.ADMIN) {
+    throw new AppError('Only admins can list deleted records', StatusCodes.FORBIDDEN);
+  }
+
   const where: Prisma.RecordWhereInput = {
+    ...(query.includeDeleted ? {} : { deletedAt: null }),
     type: query.type,
     category: query.category
       ? {
@@ -86,7 +93,9 @@ export async function updateRecord(
     notes?: string;
   }
 ) {
-  const exists = await prisma.record.findUnique({ where: { id } });
+  const exists = await prisma.record.findFirst({
+    where: { id, deletedAt: null }
+  });
 
   if (!exists) {
     throw new AppError('Record not found', StatusCodes.NOT_FOUND);
@@ -105,11 +114,16 @@ export async function updateRecord(
 }
 
 export async function deleteRecord(id: string) {
-  const exists = await prisma.record.findUnique({ where: { id } });
+  const exists = await prisma.record.findFirst({
+    where: { id, deletedAt: null }
+  });
 
   if (!exists) {
     throw new AppError('Record not found', StatusCodes.NOT_FOUND);
   }
 
-  await prisma.record.delete({ where: { id } });
+  await prisma.record.update({
+    where: { id },
+    data: { deletedAt: new Date() }
+  });
 }

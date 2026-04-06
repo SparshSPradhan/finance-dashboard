@@ -48,9 +48,17 @@ import { createRecordSchema, listRecordsSchema, updateRecordSchema } from './rec
  *         schema:
  *           type: integer
  *           default: 10
+ *       - in: query
+ *         name: includeDeleted
+ *         description: If `true`, ADMIN may list soft-deleted rows as well (default lists active only)
+ *         schema:
+ *           type: string
+ *           enum: [true, false]
  *     responses:
  *       200:
  *         description: Paginated records
+ *       403:
+ *         description: includeDeleted not allowed for this role
  *   post:
  *     tags: [Records]
  *     summary: Create a record
@@ -119,8 +127,8 @@ import { createRecordSchema, listRecordsSchema, updateRecordSchema } from './rec
  *         description: Not found
  *   delete:
  *     tags: [Records]
- *     summary: Delete a record
- *     description: ADMIN only
+ *     summary: Soft-delete a record
+ *     description: ADMIN only — sets `deletedAt` (row kept for audit). Excluded from list/dashboard unless `includeDeleted=true` (ADMIN list only).
  *     security:
  *       - bearerAuth: []
  *     parameters:

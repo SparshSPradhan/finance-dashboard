@@ -5,18 +5,22 @@ function normalizeNumber(value: unknown): number {
   return Number(value ?? 0);
 }
 
+/** Exclude soft-deleted rows from dashboard aggregates. */
+const notDeleted = { deletedAt: null };
+
 export async function getDashboardSummary() {
   const [incomeAgg, expenseAgg, categoryGroup, recentRecords] = await Promise.all([
     prisma.record.aggregate({
-      where: { type: RecordType.INCOME },
+      where: { type: RecordType.INCOME, ...notDeleted },
       _sum: { amount: true }
     }),
     prisma.record.aggregate({
-      where: { type: RecordType.EXPENSE },
+      where: { type: RecordType.EXPENSE, ...notDeleted },
       _sum: { amount: true }
     }),
     prisma.record.groupBy({
       by: ['category'],
+      where: notDeleted,
       _sum: { amount: true },
       orderBy: {
         _sum: {
@@ -25,6 +29,7 @@ export async function getDashboardSummary() {
       }
     }),
     prisma.record.findMany({
+      where: notDeleted,
       orderBy: { date: 'desc' },
       take: 5,
       include: {
@@ -53,6 +58,7 @@ export async function getDashboardSummary() {
 export async function getMonthlyTrend(months = 6) {
   const records = await prisma.record.findMany({
     where: {
+      ...notDeleted,
       date: {
         gte: new Date(new Date().setMonth(new Date().getMonth() - months + 1))
       }

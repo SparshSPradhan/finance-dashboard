@@ -104,7 +104,7 @@ describe('Integration API', () => {
       expect(res.body.items.every((r: { type: string }) => r.type === 'EXPENSE')).toBe(true);
     });
 
-    it('admin can create, patch, and delete a record', async () => {
+    it('admin can create, patch, and soft-delete a record', async () => {
       const token = await login(testUsers.admin.email, testUsers.admin.password);
 
       const create = await request(app)
@@ -129,6 +129,31 @@ describe('Integration API', () => {
 
       const del = await request(app).delete(`/records/${id}`).set('Authorization', `Bearer ${token}`);
       expect(del.status).toBe(204);
+
+      const listActive = await request(app).get('/records').set('Authorization', `Bearer ${token}`);
+      expect(listActive.status).toBe(200);
+      expect(listActive.body.items.some((r: { id: string }) => r.id === id)).toBe(false);
+
+      const listWithDeleted = await request(app)
+        .get('/records')
+        .query({ includeDeleted: 'true' })
+        .set('Authorization', `Bearer ${token}`);
+      expect(listWithDeleted.status).toBe(200);
+      const soft = listWithDeleted.body.items.find((r: { id: string }) => r.id === id);
+      expect(soft).toBeDefined();
+      expect(soft.deletedAt).not.toBeNull();
+
+      const delAgain = await request(app).delete(`/records/${id}`).set('Authorization', `Bearer ${token}`);
+      expect(delAgain.status).toBe(404);
+    });
+
+    it('viewer cannot use includeDeleted query', async () => {
+      const token = await login(testUsers.viewer.email, testUsers.viewer.password);
+      const res = await request(app)
+        .get('/records')
+        .query({ includeDeleted: 'true' })
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(403);
     });
 
     it('viewer cannot create records', async () => {
@@ -158,6 +183,23 @@ describe('Integration API', () => {
       });
       expect(Array.isArray(res.body.categoryTotals)).toBe(true);
       expect(Array.isArray(res.body.recentActivity)).toBe(true);
+    });
+
+    it('excludes soft-deleted records from summary', async () => {
+      const adminToken = await login(testUsers.admin.email, testUsers.admin.password);
+      const list = await request(app).get('/records').query({ type: 'EXPENSE' }).set('Authorization', `Bearer ${adminToken}`);
+      const expenseId = list.body.items[0].id as string;
+
+      await request(app).delete(`/records/${expenseId}`).set('Authorization', `Bearer ${adminToken}`);
+
+      const viewerToken = await login(testUsers.viewer.email, testUsers.viewer.password);
+      const res = await request(app).get('/dashboard/summary').set('Authorization', `Bearer ${viewerToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        totalIncome: 500,
+        totalExpense: 0,
+        netBalance: 500
+      });
     });
 
     it('viewer cannot read monthly trend', async () => {

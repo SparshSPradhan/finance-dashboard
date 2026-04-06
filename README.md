@@ -32,6 +32,7 @@ A complete backend assignment solution for a finance dashboard system using:
   - by category
   - by date range
 - Pagination support
+- **Soft delete** via `DELETE` (sets `deletedAt`; hidden from default list and dashboard)
 
 ### 3) Dashboard Summary APIs
 - Total income
@@ -56,9 +57,13 @@ A complete backend assignment solution for a finance dashboard system using:
 
 ### Optional Enhancements Added
 - Seed script for sample users and records
-- Swagger UI at `/docs`
+- Swagger UI at `/docs` (OpenAPI)
 - Dockerized local setup
-- Basic integration test
+- JWT-based authentication
+- Pagination and filtering for records
+- **Soft delete** for financial records (`deletedAt`; excluded from lists and dashboard by default)
+- **Rate limiting** via `express-rate-limit` (global API + stricter `/auth` window)
+- Integration testing using Jest and Supertest
 
 ---
 
@@ -81,6 +86,7 @@ finance-dashboard/
     middlewares/
       auth.middleware.ts
       error.middleware.ts
+      rateLimit.middleware.ts
       rbac.middleware.ts
       validate.middleware.ts
     modules/
@@ -177,7 +183,7 @@ Swagger docs: `http://localhost:4000/docs`
 
 OpenAPI is generated from JSDoc on `src/routes/index.ts` and each `src/modules/**/*.route.ts` file, so **all 11 HTTP operations** from the API overview appear (as **8 paths**: some paths define multiple methods, for example `GET` and `POST` on `/records`).
 
-For interview-style Q&A about this project, see `INTERVIEW_QA.md`.
+
 
 ---
 
@@ -228,10 +234,11 @@ After seeding, use:
   - `PATCH /users/:id`
 
 - Records
-  - `GET /records` (Viewer/Analyst/Admin)
+  - `GET /records` (Viewer/Analyst/Admin) — active rows only (`deletedAt IS NULL`)
+  - `GET /records?includeDeleted=true` (Admin only) — includes soft-deleted rows (for audit / recovery workflows)
   - `POST /records` (Admin)
-  - `PATCH /records/:id` (Admin)
-  - `DELETE /records/:id` (Admin)
+  - `PATCH /records/:id` (Admin) — not allowed once soft-deleted
+  - `DELETE /records/:id` (Admin) — **soft delete** (sets `deletedAt`; row remains in DB)
 
 - Dashboard
   - `GET /dashboard/summary` (Viewer/Analyst/Admin)
@@ -249,6 +256,35 @@ Authorization: Bearer <token>
 
 ---
 
+## Soft delete (records)
+
+- `DELETE /records/:id` does **not** remove the row; it sets `deletedAt` to the current time.
+- Default `GET /records` and all **dashboard** aggregations only include rows where `deletedAt` is null, so totals and “recent activity” stay consistent with what users see in the UI.
+- **Admin** can pass `includeDeleted=true` on `GET /records` to see soft-deleted entries (and their `deletedAt` timestamp). Other roles receive **403** if they try.
+- Calling `DELETE` again on an already soft-deleted id returns **404** (treated as “no active record”).
+
+---
+
+## Rate limiting
+
+Implemented with [`express-rate-limit`](https://github.com/express-rate/express-rate-limit):
+
+| Scope | Default window | Default max requests | Notes |
+|--------|----------------|----------------------|--------|
+| Whole API (per IP) | 15 minutes | 300 | Skips `GET /health` and `/docs` (Swagger UI + assets) |
+| `/auth/*` (per IP) | 15 minutes | 30 | Extra throttle on login to slow password guessing |
+
+Responses use **429 Too Many Requests** with a small JSON body, e.g. `{ "message": "Too many requests..." }`.
+
+**Tests:** When `NODE_ENV=test`, limits are set very high so Jest integration tests do not fail spuriously.
+
+**Optional environment variables** (see `.env.example`):
+
+- `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX`
+- `AUTH_RATE_LIMIT_WINDOW_MS`, `AUTH_RATE_LIMIT_MAX`
+
+---
+
 ## Example cURL Commands
 
 ### Login (Admin)
@@ -261,6 +297,12 @@ curl -X POST http://localhost:4000/auth/login \
 ### List Records
 ```bash
 curl "http://localhost:4000/records?page=1&limit=10&type=EXPENSE" \
+  -H "Authorization: Bearer <token>"
+```
+
+### List Including Soft-Deleted (Admin only)
+```bash
+curl "http://localhost:4000/records?includeDeleted=true" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -311,7 +353,7 @@ Integration tests use PostgreSQL database **`finance_dashboard_test`** (create i
 What is covered:
 
 - `tests/health.test.ts` — smoke test for `GET /health` (no DB writes).
-- `tests/integration/app.integration.test.ts` — auth, users (admin), records CRUD + filters, dashboard summary/trend, RBAC (403/401), validation (400).
+- `tests/integration/app.integration.test.ts` — auth, users (admin), records CRUD + filters, **soft delete** + `includeDeleted` (admin vs 403 for viewer), dashboard summary/trend (summary excludes deleted rows), RBAC (403/401), validation (400).
 
 Each integration test resets data with `deleteMany` and re-seeds isolated users (emails under `@test.local`).
 
@@ -325,6 +367,8 @@ Each integration test resets data with `deleteMany` and re-seeds isolated users 
 - Inactive users cannot login.
 - Monetary values are stored as `Decimal(12,2)` in PostgreSQL.
 - Pagination defaults to `page=1`, `limit=10`.
+- Record **delete** is soft by design; hard delete was not required for the assignment and keeps an audit trail in the database.
+- Rate limits are per IP using in-memory stores; for multiple server instances in production you would switch to a shared store (e.g. Redis).
 
 ---
 

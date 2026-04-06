@@ -9,13 +9,17 @@ export async function createRecordController(req: Request, res: Response): Promi
 }
 
 export async function listRecordsController(req: Request, res: Response): Promise<void> {
+  const includeDeleted = req.query.includeDeleted === 'true';
+
   const result = await listRecords({
     type: req.query.type as 'INCOME' | 'EXPENSE' | undefined,
     category: req.query.category as string | undefined,
     startDate: req.query.startDate as string | undefined,
     endDate: req.query.endDate as string | undefined,
     page: Number(req.query.page ?? 1),
-    limit: Number(req.query.limit ?? 10)
+    limit: Number(req.query.limit ?? 10),
+    includeDeleted,
+    requesterRole: req.user!.role
   });
   res.status(StatusCodes.OK).json(result);
 }
