@@ -1,5 +1,20 @@
 # Finance Data Processing and Access Control Backend
 
+## Key Highlights
+
+- Role-Based Access Control (RBAC) with 3 roles
+- Soft delete implementation with audit-safe queries
+- Dashboard aggregation APIs (summary + monthly trends)
+- Rate limiting for API protection
+- Fully tested with integration tests (Jest + Supertest)
+- Separate test database for safe testing
+
+
+
+Built using a modular feature-based architecture with clear separation of concerns (controller → service → data layer).
+
+
+
 A complete backend assignment solution for a finance dashboard system using:
 
 - Backend: Express + TypeScript
@@ -69,7 +84,7 @@ A complete backend assignment solution for a finance dashboard system using:
 
 ## Folder Structure
 
-HTTP handlers live next to their routes and services as `*.controller.ts` inside each feature folder under `src/modules/`. There is no separate top-level `controllers/` directory.
+
 
 ```text
 finance-dashboard/
@@ -181,7 +196,7 @@ App runs at: `http://localhost:4000`
 
 Swagger docs: `http://localhost:4000/docs`
 
-OpenAPI is generated from JSDoc on `src/routes/index.ts` and each `src/modules/**/*.route.ts` file, so **all 11 HTTP operations** from the API overview appear (as **8 paths**: some paths define multiple methods, for example `GET` and `POST` on `/records`).
+OpenAPI documentation is generated using JSDoc and available at `/docs`.
 
 
 
@@ -206,6 +221,7 @@ This starts:
 ---
 
 ## Default Seed Users
+> Note: These are sample credentials for local development only.
 
 After seeding, use:
 
